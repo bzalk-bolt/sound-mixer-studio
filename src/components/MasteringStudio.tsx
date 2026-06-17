@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useMasteringState } from '../hooks/useMasteringState';
-import { masteringService, jobService } from '../services';
+import { masteringService, jobService, uploadService } from '../services';
 import { UploadZone } from './UploadZone';
 import { ProfileSelector } from './ProfileSelector';
 import { CandidateCard } from './CandidateCard';
@@ -21,6 +21,7 @@ import {
 export function MasteringStudio() {
   const {
     state,
+    setStatus,
     setSource,
     setReference,
     setMasterCommandId,
@@ -39,6 +40,7 @@ export function MasteringStudio() {
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [progressLabel, setProgressLabel] = useState('Processing...');
+  const [referenceFilename, setReferenceFilename] = useState('');
 
   useEffect(() => {
     masteringService.getProfiles()
@@ -46,15 +48,29 @@ export function MasteringStudio() {
       .catch(() => {});
   }, [setProfiles]);
 
-  const handleSourceFile = useCallback((file: File) => {
-    const url = URL.createObjectURL(file);
-    setSource(url, file.name);
-  }, [setSource]);
+  const handleSourceFile = useCallback(async (file: File) => {
+    try {
+      setProgressLabel('Uploading source mix...');
+      setStatus('uploading_source');
+      const upload = await uploadService.uploadAudioFile(file);
+      setSource(upload.audioUrl, file.name);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }, [setStatus, setSource, setError]);
 
-  const handleReferenceFile = useCallback((file: File) => {
-    const url = URL.createObjectURL(file);
-    setReference(url);
-  }, [setReference]);
+  const handleReferenceFile = useCallback(async (file: File) => {
+    try {
+      setProgressLabel('Uploading reference track...');
+      setStatus('uploading_source');
+      const upload = await uploadService.uploadAudioFile(file);
+      setReference(upload.audioUrl);
+      setReferenceFilename(file.name);
+      setStatus(state.sourceUrl ? 'source_ready' : 'idle');
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }, [state.sourceUrl, setStatus, setReference, setError]);
 
   const handleStartMastering = useCallback(async () => {
     if (!state.sourceUrl) return;
@@ -160,6 +176,7 @@ export function MasteringStudio() {
     setSelectedProfile('');
     setUserGoal('');
     setPlayingCandidate('');
+    setReferenceFilename('');
     setShowAnalysis(false);
   }, [reset]);
 
@@ -208,10 +225,14 @@ export function MasteringStudio() {
               <UploadZone
                 label="Reference track (optional)"
                 onFileSelected={handleReferenceFile}
-                currentFile={null}
+                currentFile={referenceFilename || null}
               />
             </div>
           </div>
+        )}
+
+        {state.status === 'uploading_source' && (
+          <ProgressIndicator status="UPLOADING" label={progressLabel} />
         )}
 
         {state.status === 'source_ready' && (
@@ -221,13 +242,19 @@ export function MasteringStudio() {
                 label="Source Mix"
                 onFileSelected={handleSourceFile}
                 currentFile={state.sourceFilename}
-                onClear={() => reset()}
+                onClear={() => {
+                  reset();
+                  setReferenceFilename('');
+                }}
               />
               <UploadZone
                 label="Reference track (optional)"
                 onFileSelected={handleReferenceFile}
-                currentFile={state.referenceUrl ? 'Reference loaded' : null}
-                onClear={() => setReference('')}
+                currentFile={referenceFilename || (state.referenceUrl ? 'Reference loaded' : null)}
+                onClear={() => {
+                  setReference('');
+                  setReferenceFilename('');
+                }}
               />
             </div>
 
