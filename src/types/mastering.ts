@@ -164,6 +164,7 @@ export interface AppState {
   finalCommandId: string;
   status: AppStatus;
   recommendedCandidates: Candidate[];
+  processingLog: ProcessingLogEntry[];
   selectedCandidateId: string;
   finalDownloadUrl: string;
   errorMessage: string;

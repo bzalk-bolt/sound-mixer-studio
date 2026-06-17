@@ -1,6 +1,6 @@
 import { Candidate } from '../types/mastering';
 import { AudioPlayer } from './AudioPlayer';
-import { Award, Zap, Sun, Volume2 } from 'lucide-react';
+import { Award, FileText, Zap, Sun, Volume2 } from 'lucide-react';
 
 interface CandidateCardProps {
   candidate: Candidate;
@@ -8,6 +8,7 @@ interface CandidateCardProps {
   isPlaying: boolean;
   onSelect: () => void;
   onPlay: () => void;
+  onShowLogs: () => void;
   rank: number;
 }
 
@@ -46,7 +47,7 @@ function formatNumber(value: number | null | undefined, digits = 1): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '--';
 }
 
-export function CandidateCard({ candidate, isSelected, isPlaying, onSelect, onPlay, rank }: CandidateCardProps) {
+export function CandidateCard({ candidate, isSelected, isPlaying, onSelect, onPlay, onShowLogs, rank }: CandidateCardProps) {
   const analysis = candidate.post_analysis;
   const stereoAssessment = analysis?.stereo?.stereo_assessment?.replace(/_/g, ' ');
 
@@ -146,6 +147,17 @@ export function CandidateCard({ candidate, isSelected, isPlaying, onSelect, onPl
           isActive={isPlaying}
           onPlay={onPlay}
         />
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onShowLogs();
+          }}
+          className="mt-3 inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors"
+        >
+          <FileText className="w-3.5 h-3.5" />
+          Logs
+        </button>
       </div>
 
       {isSelected && (

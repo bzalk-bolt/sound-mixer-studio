@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { AppState, AppStatus, Candidate, ProfilesResponse, SourceAnalysis } from '../types/mastering';
+import type { AppState, AppStatus, Candidate, ProcessingLogEntry, ProfilesResponse, SourceAnalysis } from '../types/mastering';
 
 const initialState: AppState = {
   sourceUrl: '',
@@ -9,6 +9,7 @@ const initialState: AppState = {
   finalCommandId: '',
   status: 'idle',
   recommendedCandidates: [],
+  processingLog: [],
   selectedCandidateId: '',
   finalDownloadUrl: '',
   errorMessage: '',
@@ -35,10 +36,11 @@ export function useMasteringState() {
     setState((prev) => ({ ...prev, masterCommandId: id, status: 'mastering_running' }));
   }, []);
 
-  const setCandidates = useCallback((candidates: Candidate[], analysis: SourceAnalysis | null) => {
+  const setCandidates = useCallback((candidates: Candidate[], analysis: SourceAnalysis | null, processingLog: ProcessingLogEntry[] = []) => {
     setState((prev) => ({
       ...prev,
       recommendedCandidates: candidates,
+      processingLog,
       sourceAnalysis: analysis,
       status: 'previews_ready',
     }));

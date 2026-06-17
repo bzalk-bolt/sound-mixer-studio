@@ -7,6 +7,7 @@ import { CandidateCard } from './CandidateCard';
 import { AnalysisPanel } from './AnalysisPanel';
 import { ProgressIndicator } from './ProgressIndicator';
 import { ConfirmModal } from './ConfirmModal';
+import { ProcessingLogModal } from './ProcessingLogModal';
 import {
   Disc3,
   Download,
@@ -41,9 +42,13 @@ export function MasteringStudio() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [progressLabel, setProgressLabel] = useState('Processing...');
   const [referenceFilename, setReferenceFilename] = useState('');
+  const [logCandidateId, setLogCandidateId] = useState('');
   const selectedCandidate = state.recommendedCandidates.find(
     (candidate) => candidate.candidate_id === state.selectedCandidateId,
   );
+  const logCandidate = state.recommendedCandidates.find(
+    (candidate) => candidate.candidate_id === logCandidateId,
+  ) || null;
 
   useEffect(() => {
     masteringService.getProfiles()
@@ -123,7 +128,7 @@ export function MasteringStudio() {
       clearInterval(msgInterval);
 
       if (result.recommended_candidates && result.recommended_candidates.length > 0) {
-        setCandidates(result.recommended_candidates, result.source_analysis || null);
+        setCandidates(result.recommended_candidates, result.source_analysis || null, result.processing_log || []);
         await jobService.updateJobStatus(command_id, 'COMPLETED', {
           sourceAnalysis: result.source_analysis,
           recommendedCandidates: result.recommended_candidates,
@@ -181,6 +186,7 @@ export function MasteringStudio() {
     setPlayingCandidate('');
     setReferenceFilename('');
     setShowAnalysis(false);
+    setLogCandidateId('');
   }, [reset]);
 
   return (
@@ -346,6 +352,7 @@ export function MasteringStudio() {
                     isPlaying={playingCandidate === candidate.candidate_id}
                     onSelect={() => selectCandidate(candidate.candidate_id)}
                     onPlay={() => setPlayingCandidate(candidate.candidate_id)}
+                    onShowLogs={() => setLogCandidateId(candidate.candidate_id)}
                     rank={idx + 1}
                   />
                 ))}
@@ -429,6 +436,13 @@ export function MasteringStudio() {
         onConfirm={handleReset}
         onCancel={() => setShowResetModal(false)}
         variant="warning"
+      />
+
+      <ProcessingLogModal
+        isOpen={Boolean(logCandidateId)}
+        candidate={logCandidate}
+        logs={state.processingLog}
+        onClose={() => setLogCandidateId('')}
       />
     </div>
   );
