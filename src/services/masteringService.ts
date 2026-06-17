@@ -3,7 +3,9 @@ import type {
   MasteringRequest,
   MasteringJobResult,
   FinalizeJobResult,
+  MasteringAdjustments,
   ProfilesResponse,
+  ReprocessCandidateResponse,
   SourceAnalysis,
 } from '../types/mastering';
 
@@ -69,6 +71,24 @@ export async function finalizeMaster(params: {
       command_id: params.commandId,
       candidate_id: params.candidateId,
       output_filename: params.outputFilename || 'FINAL_MASTER.wav',
+    },
+  });
+  return response.json();
+}
+
+export async function reprocessCandidate(params: {
+  commandId: string;
+  candidateId: string;
+  adjustments: MasteringAdjustments;
+  previewSeconds?: number;
+}): Promise<ReprocessCandidateResponse> {
+  const response = await callEdgeFunction('/mastering/reprocess', {
+    method: 'POST',
+    body: {
+      command_id: params.commandId,
+      candidate_id: params.candidateId,
+      adjustments: params.adjustments,
+      preview_seconds: params.previewSeconds || 75,
     },
   });
   return response.json();

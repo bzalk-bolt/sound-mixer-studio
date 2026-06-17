@@ -84,6 +84,18 @@ export interface Candidate {
   plan: Record<string, unknown>;
   post_analysis: SourceAnalysis;
   score_breakdown: ScoreBreakdown;
+  edit_version?: number;
+  last_adjustments?: MasteringAdjustments;
+}
+
+export interface MasteringAdjustments {
+  brightness: number;
+  warmth: number;
+  presence: number;
+  stereo_width: number;
+  cleanup: number;
+  loudness: number;
+  ambience: number;
 }
 
 export interface ProcessingLogEntry {
@@ -154,6 +166,12 @@ export interface MasteringRequest {
   user_goal?: string;
   preview_seconds?: number;
   output_filename?: string;
+}
+
+export interface ReprocessCandidateResponse {
+  success: boolean;
+  candidate: Candidate;
+  processing_log?: ProcessingLogEntry[];
 }
 
 export interface AppState {

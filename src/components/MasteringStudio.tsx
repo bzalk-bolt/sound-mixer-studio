@@ -8,6 +8,7 @@ import { AnalysisPanel } from './AnalysisPanel';
 import { ProgressIndicator } from './ProgressIndicator';
 import { ConfirmModal } from './ConfirmModal';
 import { ProcessingLogModal } from './ProcessingLogModal';
+import type { MasteringAdjustments } from '../types/mastering';
 import {
   Disc3,
   Download,
@@ -28,6 +29,7 @@ export function MasteringStudio() {
     setMasterCommandId,
     setCandidates,
     selectCandidate,
+    updateCandidate,
     setFinalizing,
     setFinalReady,
     setError,
@@ -43,6 +45,7 @@ export function MasteringStudio() {
   const [progressLabel, setProgressLabel] = useState('Processing...');
   const [referenceFilename, setReferenceFilename] = useState('');
   const [logCandidateId, setLogCandidateId] = useState('');
+  const [reprocessingCandidateId, setReprocessingCandidateId] = useState('');
   const selectedCandidate = state.recommendedCandidates.find(
     (candidate) => candidate.candidate_id === state.selectedCandidateId,
   );
@@ -187,7 +190,31 @@ export function MasteringStudio() {
     setReferenceFilename('');
     setShowAnalysis(false);
     setLogCandidateId('');
+    setReprocessingCandidateId('');
   }, [reset]);
+
+  const handleReprocessCandidate = useCallback(async (candidateId: string, adjustments: MasteringAdjustments) => {
+    if (!state.masterCommandId) return;
+    try {
+      setReprocessingCandidateId(candidateId);
+      const result = await masteringService.reprocessCandidate({
+        commandId: state.masterCommandId,
+        candidateId,
+        adjustments,
+        previewSeconds: 75,
+      });
+      updateCandidate(result.candidate, result.processing_log);
+      await jobService.updateJobStatus(state.masterCommandId, 'COMPLETED', {
+        recommendedCandidates: state.recommendedCandidates.map((candidate) =>
+          candidate.candidate_id === result.candidate.candidate_id ? result.candidate : candidate,
+        ),
+      }).catch(() => {});
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setReprocessingCandidateId('');
+    }
+  }, [state.masterCommandId, state.recommendedCandidates, updateCandidate, setError]);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -353,6 +380,8 @@ export function MasteringStudio() {
                     onSelect={() => selectCandidate(candidate.candidate_id)}
                     onPlay={() => setPlayingCandidate(candidate.candidate_id)}
                     onShowLogs={() => setLogCandidateId(candidate.candidate_id)}
+                    onReprocess={(adjustments) => handleReprocessCandidate(candidate.candidate_id, adjustments)}
+                    isReprocessing={reprocessingCandidateId === candidate.candidate_id}
                     rank={idx + 1}
                   />
                 ))}

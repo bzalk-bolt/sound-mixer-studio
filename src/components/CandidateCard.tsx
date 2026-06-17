@@ -1,6 +1,7 @@
-import { Candidate } from '../types/mastering';
+import { useState } from 'react';
+import { Candidate, MasteringAdjustments } from '../types/mastering';
 import { AudioPlayer } from './AudioPlayer';
-import { Award, FileText, Zap, Sun, Volume2 } from 'lucide-react';
+import { Award, FileText, RefreshCw, SlidersHorizontal, Zap, Sun, Volume2 } from 'lucide-react';
 
 interface CandidateCardProps {
   candidate: Candidate;
@@ -9,8 +10,20 @@ interface CandidateCardProps {
   onSelect: () => void;
   onPlay: () => void;
   onShowLogs: () => void;
+  onReprocess: (adjustments: MasteringAdjustments) => void;
+  isReprocessing: boolean;
   rank: number;
 }
+
+const neutralAdjustments: MasteringAdjustments = {
+  brightness: 0,
+  warmth: 0,
+  presence: 0,
+  stereo_width: 0,
+  cleanup: 0,
+  loudness: 0,
+  ambience: 0,
+};
 
 function getStyleIcon(style: string) {
   switch (style) {
@@ -47,9 +60,59 @@ function formatNumber(value: number | null | undefined, digits = 1): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '--';
 }
 
-export function CandidateCard({ candidate, isSelected, isPlaying, onSelect, onPlay, onShowLogs, rank }: CandidateCardProps) {
+function AdjustmentSlider({
+  label,
+  value,
+  min = -1,
+  max = 1,
+  step = 0.1,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="grid grid-cols-[72px_1fr_34px] items-center gap-2 text-[10px] text-neutral-500">
+      <span>{label}</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="w-full accent-cyan-400"
+      />
+      <span className="text-right tabular-nums text-neutral-400">{value.toFixed(1)}</span>
+    </label>
+  );
+}
+
+export function CandidateCard({
+  candidate,
+  isSelected,
+  isPlaying,
+  onSelect,
+  onPlay,
+  onShowLogs,
+  onReprocess,
+  isReprocessing,
+  rank,
+}: CandidateCardProps) {
   const analysis = candidate.post_analysis;
   const stereoAssessment = analysis?.stereo?.stereo_assessment?.replace(/_/g, ' ');
+  const [showControls, setShowControls] = useState(false);
+  const [adjustments, setAdjustments] = useState<MasteringAdjustments>(
+    candidate.last_adjustments || neutralAdjustments,
+  );
+
+  const setAdjustment = (key: keyof MasteringAdjustments, value: number) => {
+    setAdjustments((current) => ({ ...current, [key]: value }));
+  };
 
   return (
     <div
@@ -147,17 +210,64 @@ export function CandidateCard({ candidate, isSelected, isPlaying, onSelect, onPl
           isActive={isPlaying}
           onPlay={onPlay}
         />
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onShowLogs();
-          }}
-          className="mt-3 inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors"
-        >
-          <FileText className="w-3.5 h-3.5" />
-          Logs
-        </button>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setShowControls((current) => !current);
+            }}
+            className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            Adjust
+          </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onShowLogs();
+            }}
+            className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Logs
+          </button>
+        </div>
+
+        {showControls && (
+          <div
+            className="mt-4 space-y-2 rounded-lg border border-white/[0.06] bg-black/20 p-3"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <AdjustmentSlider label="Bright" value={adjustments.brightness} onChange={(value) => setAdjustment('brightness', value)} />
+            <AdjustmentSlider label="Warmth" value={adjustments.warmth} onChange={(value) => setAdjustment('warmth', value)} />
+            <AdjustmentSlider label="Presence" value={adjustments.presence} onChange={(value) => setAdjustment('presence', value)} />
+            <AdjustmentSlider label="Stereo" value={adjustments.stereo_width} onChange={(value) => setAdjustment('stereo_width', value)} />
+            <AdjustmentSlider label="Cleanup" value={adjustments.cleanup} onChange={(value) => setAdjustment('cleanup', value)} />
+            <AdjustmentSlider label="Loudness" value={adjustments.loudness} onChange={(value) => setAdjustment('loudness', value)} />
+            <AdjustmentSlider label="Reverb" value={adjustments.ambience} min={0} max={1} onChange={(value) => setAdjustment('ambience', value)} />
+            <div className="flex items-center justify-between gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setAdjustments(neutralAdjustments)}
+                disabled={isReprocessing}
+                className="text-xs text-neutral-500 hover:text-neutral-300 disabled:opacity-40"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => onReprocess(adjustments)}
+                disabled={isReprocessing}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isReprocessing ? 'animate-spin' : ''}`} />
+                {isReprocessing ? 'Rendering' : 'Reprocess'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isSelected && (

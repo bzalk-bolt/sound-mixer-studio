@@ -50,6 +50,16 @@ export function useMasteringState() {
     setState((prev) => ({ ...prev, selectedCandidateId: id }));
   }, []);
 
+  const updateCandidate = useCallback((candidate: Candidate, processingLog?: ProcessingLogEntry[]) => {
+    setState((prev) => ({
+      ...prev,
+      recommendedCandidates: prev.recommendedCandidates.map((item) =>
+        item.candidate_id === candidate.candidate_id ? candidate : item,
+      ),
+      processingLog: processingLog || prev.processingLog,
+    }));
+  }, []);
+
   const setFinalizing = useCallback((commandId: string) => {
     setState((prev) => ({ ...prev, finalCommandId: commandId, status: 'finalizing' }));
   }, []);
@@ -78,6 +88,7 @@ export function useMasteringState() {
     setMasterCommandId,
     setCandidates,
     selectCandidate,
+    updateCandidate,
     setFinalizing,
     setFinalReady,
     setError,
