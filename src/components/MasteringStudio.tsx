@@ -41,6 +41,9 @@ export function MasteringStudio() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [progressLabel, setProgressLabel] = useState('Processing...');
   const [referenceFilename, setReferenceFilename] = useState('');
+  const selectedCandidate = state.recommendedCandidates.find(
+    (candidate) => candidate.candidate_id === state.selectedCandidateId,
+  );
 
   useEffect(() => {
     masteringService.getProfiles()
@@ -315,8 +318,20 @@ export function MasteringStudio() {
             </div>
 
             {showAnalysis && state.sourceAnalysis && (
-              <div className="animate-in slide-in-from-top-2 duration-300">
-                <AnalysisPanel analysis={state.sourceAnalysis} />
+              <div className="space-y-5 animate-in slide-in-from-top-2 duration-300">
+                <AnalysisPanel
+                  title="Source Analysis"
+                  subtitle="Measured before mastering."
+                  analysis={state.sourceAnalysis}
+                />
+                {selectedCandidate?.post_analysis && (
+                  <AnalysisPanel
+                    title={`Selected Candidate Analysis: ${selectedCandidate.style} / ${selectedCandidate.loudness}`}
+                    subtitle="Measured after FFmpeg rendered the preview. Deltas compare against the source."
+                    analysis={selectedCandidate.post_analysis}
+                    compareTo={state.sourceAnalysis}
+                  />
+                )}
               </div>
             )}
 

@@ -34,6 +34,13 @@ export interface StereoAnalysis {
   width_score: number;
   mono_correlation: number;
   low_end_width: number;
+  channel_balance_db?: number;
+  left_rms_db?: number;
+  right_rms_db?: number;
+  mid_rms_db?: number;
+  side_rms_db?: number;
+  effective_mono?: boolean;
+  stereo_assessment?: string;
 }
 
 export interface DynamicsAnalysis {
@@ -75,8 +82,14 @@ export interface Candidate {
     storage_url: string;
   };
   plan: Record<string, unknown>;
-  post_analysis: Record<string, unknown>;
+  post_analysis: SourceAnalysis;
   score_breakdown: ScoreBreakdown;
+}
+
+export interface ProcessingLogEntry {
+  ts: string;
+  event: string;
+  [key: string]: unknown;
 }
 
 export interface MasteringJobResult {
@@ -92,6 +105,7 @@ export interface MasteringJobResult {
   };
   candidate_scores?: Candidate[];
   recommended_candidates?: Candidate[];
+  processing_log?: ProcessingLogEntry[];
   output_filename?: string;
   error_message?: string;
   created_at?: number;
@@ -108,6 +122,7 @@ export interface FinalizeJobResult {
     };
   };
   final_analysis?: Record<string, unknown>;
+  processing_log?: ProcessingLogEntry[];
   error_message?: string;
 }
 

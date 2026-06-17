@@ -2,6 +2,9 @@ import { SourceAnalysis } from '../types/mastering';
 
 interface AnalysisPanelProps {
   analysis: SourceAnalysis;
+  title?: string;
+  subtitle?: string;
+  compareTo?: SourceAnalysis | null;
 }
 
 function MeterBar({ value, max, label, color }: { value: number; max: number; label: string; color: string }) {
@@ -20,7 +23,26 @@ function MeterBar({ value, max, label, color }: { value: number; max: number; la
   );
 }
 
-export function AnalysisPanel({ analysis }: AnalysisPanelProps) {
+function formatDelta(value: number | null | undefined, compareValue: number | null | undefined, suffix = '') {
+  if (
+    typeof value !== 'number'
+    || !Number.isFinite(value)
+    || typeof compareValue !== 'number'
+    || !Number.isFinite(compareValue)
+  ) {
+    return null;
+  }
+  const delta = value - compareValue;
+  if (Math.abs(delta) < 0.05) return null;
+  return `${delta > 0 ? '+' : ''}${delta.toFixed(1)}${suffix}`;
+}
+
+function MetricDelta({ value }: { value: string | null }) {
+  if (!value) return null;
+  return <span className="ml-1 text-[10px] text-cyan-400 tabular-nums">({value})</span>;
+}
+
+export function AnalysisPanel({ analysis, title = 'Analysis', subtitle, compareTo = null }: AnalysisPanelProps) {
   const spectrumBands = [
     { key: 'sub_20_60', label: 'Sub', value: analysis.spectrum.sub_20_60 },
     { key: 'bass_60_120', label: 'Bass', value: analysis.spectrum.bass_60_120 },
@@ -32,25 +54,42 @@ export function AnalysisPanel({ analysis }: AnalysisPanelProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
+        {subtitle && <p className="text-xs text-neutral-500 mt-0.5">{subtitle}</p>}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
         <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-3">Loudness</h4>
         <div className="space-y-3">
           <div className="flex justify-between">
             <span className="text-xs text-neutral-500">Integrated</span>
-            <span className="text-xs text-white font-medium tabular-nums">{analysis.loudness.integrated_lufs} LUFS</span>
+            <span className="text-xs text-white font-medium tabular-nums">
+              {analysis.loudness.integrated_lufs} LUFS
+              <MetricDelta value={formatDelta(analysis.loudness.integrated_lufs, compareTo?.loudness.integrated_lufs, '')} />
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs text-neutral-500">True Peak</span>
-            <span className="text-xs text-white font-medium tabular-nums">{analysis.loudness.true_peak_db} dBTP</span>
+            <span className="text-xs text-white font-medium tabular-nums">
+              {analysis.loudness.true_peak_db} dBTP
+              <MetricDelta value={formatDelta(analysis.loudness.true_peak_db, compareTo?.loudness.true_peak_db, '')} />
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs text-neutral-500">LRA</span>
-            <span className="text-xs text-white font-medium tabular-nums">{analysis.loudness.lra} LU</span>
+            <span className="text-xs text-white font-medium tabular-nums">
+              {analysis.loudness.lra} LU
+              <MetricDelta value={formatDelta(analysis.loudness.lra, compareTo?.loudness.lra, '')} />
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs text-neutral-500">Crest Factor</span>
-            <span className="text-xs text-white font-medium tabular-nums">{analysis.loudness.crest_factor} dB</span>
+            <span className="text-xs text-white font-medium tabular-nums">
+              {analysis.loudness.crest_factor} dB
+              <MetricDelta value={formatDelta(analysis.loudness.crest_factor, compareTo?.loudness.crest_factor, '')} />
+            </span>
           </div>
         </div>
       </div>
@@ -75,11 +114,42 @@ export function AnalysisPanel({ analysis }: AnalysisPanelProps) {
         <div className="space-y-3 mb-4">
           <div className="flex justify-between">
             <span className="text-xs text-neutral-500">Stereo Width</span>
-            <span className="text-xs text-white font-medium tabular-nums">{(analysis.stereo.width_score * 100).toFixed(0)}%</span>
+            <span className="text-xs text-white font-medium tabular-nums">
+              {(analysis.stereo.width_score * 100).toFixed(0)}%
+              <MetricDelta value={formatDelta(analysis.stereo.width_score * 100, compareTo ? compareTo.stereo.width_score * 100 : null, '%')} />
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs text-neutral-500">Mono Correlation</span>
-            <span className="text-xs text-white font-medium tabular-nums">{analysis.stereo.mono_correlation.toFixed(2)}</span>
+            <span className="text-xs text-white font-medium tabular-nums">
+              {analysis.stereo.mono_correlation.toFixed(2)}
+              <MetricDelta value={formatDelta(analysis.stereo.mono_correlation, compareTo?.stereo.mono_correlation, '')} />
+            </span>
+          </div>
+          {analysis.stereo.stereo_assessment && (
+            <div className="flex justify-between">
+              <span className="text-xs text-neutral-500">Stereo Assessment</span>
+              <span className="text-xs text-white font-medium capitalize">{analysis.stereo.stereo_assessment.replace(/_/g, ' ')}</span>
+            </div>
+          )}
+          {typeof analysis.stereo.channel_balance_db === 'number' && (
+            <div className="flex justify-between">
+              <span className="text-xs text-neutral-500">Channel Balance</span>
+              <span className="text-xs text-white font-medium tabular-nums">{analysis.stereo.channel_balance_db.toFixed(1)} dB</span>
+            </div>
+          )}
+          {analysis.stereo.effective_mono && (
+            <div className="flex justify-between">
+              <span className="text-xs text-neutral-500">Mono Source</span>
+              <span className="text-xs text-amber-400 font-medium">Detected</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-xs text-neutral-500">Low-End Width</span>
+            <span className="text-xs text-white font-medium tabular-nums">
+              {(analysis.stereo.low_end_width * 100).toFixed(0)}%
+              <MetricDelta value={formatDelta(analysis.stereo.low_end_width * 100, compareTo ? compareTo.stereo.low_end_width * 100 : null, '%')} />
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs text-neutral-500">Transient Density</span>
@@ -105,6 +175,7 @@ export function AnalysisPanel({ analysis }: AnalysisPanelProps) {
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );

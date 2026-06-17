@@ -42,7 +42,14 @@ function getScoreColor(score: number): string {
   return 'text-red-400';
 }
 
+function formatNumber(value: number | null | undefined, digits = 1): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '--';
+}
+
 export function CandidateCard({ candidate, isSelected, isPlaying, onSelect, onPlay, rank }: CandidateCardProps) {
+  const analysis = candidate.post_analysis;
+  const stereoAssessment = analysis?.stereo?.stereo_assessment?.replace(/_/g, ' ');
+
   return (
     <div
       onClick={onSelect}
@@ -79,7 +86,7 @@ export function CandidateCard({ candidate, isSelected, isPlaying, onSelect, onPl
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="bg-white/[0.03] rounded-lg p-2 text-center">
             <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-0.5">Spectral</div>
             <div className="text-xs text-neutral-300 font-medium">
@@ -99,6 +106,39 @@ export function CandidateCard({ candidate, isSelected, isPlaying, onSelect, onPl
             </div>
           </div>
         </div>
+
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          <div className="bg-black/20 rounded-lg p-2 text-center">
+            <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-0.5">LUFS</div>
+            <div className="text-xs text-neutral-300 font-medium tabular-nums">
+              {formatNumber(analysis?.loudness?.integrated_lufs)}
+            </div>
+          </div>
+          <div className="bg-black/20 rounded-lg p-2 text-center">
+            <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-0.5">TP</div>
+            <div className="text-xs text-neutral-300 font-medium tabular-nums">
+              {formatNumber(analysis?.loudness?.true_peak_db)}
+            </div>
+          </div>
+          <div className="bg-black/20 rounded-lg p-2 text-center">
+            <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-0.5">Width</div>
+            <div className="text-xs text-neutral-300 font-medium tabular-nums">
+              {formatNumber((analysis?.stereo?.width_score ?? 0) * 100, 0)}%
+            </div>
+          </div>
+          <div className="bg-black/20 rounded-lg p-2 text-center">
+            <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-0.5">Corr</div>
+            <div className="text-xs text-neutral-300 font-medium tabular-nums">
+              {formatNumber(analysis?.stereo?.mono_correlation, 2)}
+            </div>
+          </div>
+        </div>
+
+        {stereoAssessment && (
+          <div className="mb-4 text-[10px] text-neutral-500 capitalize">
+            Stereo: {stereoAssessment}
+          </div>
+        )}
 
         <AudioPlayer
           src={candidate.preview_file.storage_url}
