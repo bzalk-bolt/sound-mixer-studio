@@ -88,6 +88,7 @@ export interface Candidate {
   score_breakdown: ScoreBreakdown;
   edit_version?: number;
   last_adjustments?: MasteringAdjustments;
+  voice_cleaning?: VoiceCleaningResult;
 }
 
 export interface MasteringAdjustments {
@@ -118,6 +119,36 @@ export interface ProcessingLogEntry {
   ts: string;
   event: string;
   [key: string]: unknown;
+}
+
+export interface VoiceGateOptions {
+  mode?: 'conservative' | 'balanced' | 'aggressive';
+  attenuation_db?: number;
+  padding_ms?: number;
+  attack_ms?: number;
+  release_ms?: number;
+  min_voice_ms?: number;
+  min_gap_ms?: number;
+  fail_on_no_voice?: boolean;
+}
+
+export interface VoiceGateAnalysis {
+  duration_seconds: number;
+  voice_segment_count: number;
+  voice_seconds: number;
+  muted_seconds: number;
+  voice_ratio: number;
+  segments: Array<{ start: number; end: number }>;
+  thresholds?: Record<string, number>;
+  score_summary?: Record<string, number>;
+}
+
+export interface VoiceCleaningResult {
+  enabled: boolean;
+  stage?: string;
+  options?: VoiceGateOptions;
+  analysis?: VoiceGateAnalysis;
+  filtergraph?: string;
 }
 
 export interface MasteringJobResult {

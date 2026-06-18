@@ -10,7 +10,7 @@ interface CandidateCardProps {
   onSelect: () => void;
   onPlay: () => void;
   onShowLogs: () => void;
-  onReprocess: (adjustments: MasteringAdjustments) => void;
+  onReprocess: (adjustments: MasteringAdjustments, cleanAudio: boolean) => void;
   isReprocessing: boolean;
   rank: number;
 }
@@ -127,10 +127,16 @@ export function CandidateCard({
     [candidate.control_settings, candidate.last_adjustments],
   );
   const [adjustments, setAdjustments] = useState<MasteringAdjustments>(baseSettings);
+  const [cleanAudio, setCleanAudio] = useState(Boolean(candidate.voice_cleaning?.enabled));
+  const mutedSeconds = candidate.voice_cleaning?.analysis?.muted_seconds;
 
   useEffect(() => {
     setAdjustments(baseSettings);
   }, [baseSettings]);
+
+  useEffect(() => {
+    setCleanAudio(Boolean(candidate.voice_cleaning?.enabled));
+  }, [candidate.voice_cleaning?.enabled]);
 
   const setAdjustment = (key: keyof MasteringAdjustments, value: number) => {
     setAdjustments((current) => ({ ...current, [key]: value }));
@@ -226,6 +232,15 @@ export function CandidateCard({
           </div>
         )}
 
+        {candidate.voice_cleaning?.enabled && (
+          <div className="mb-4 rounded-lg border border-emerald-500/15 bg-emerald-500/5 px-2.5 py-2 text-[10px] text-emerald-300">
+            Clean audio applied
+            {typeof mutedSeconds === 'number' && Number.isFinite(mutedSeconds)
+              ? ` - ${mutedSeconds.toFixed(1)}s muted`
+              : ''}
+          </div>
+        )}
+
         <AudioPlayer
           src={candidate.preview_file.storage_url}
           label="Preview"
@@ -290,10 +305,30 @@ export function CandidateCard({
             <AdjustmentSlider label="Gate dB" value={adjustments.cleanup_gate} min={-60} max={-28} step={0.5} onChange={(value) => setAdjustment('cleanup_gate', value)} />
             <AdjustmentSlider label="Denoise" value={adjustments.cleanup_noise} min={0} max={24} step={0.5} onChange={(value) => setAdjustment('cleanup_noise', value)} />
             <AdjustmentSlider label="Reverb" value={adjustments.ambience} min={0} max={0.35} step={0.005} digits={3} onChange={(value) => setAdjustment('ambience', value)} />
+
+            <label className="mt-2 flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.03] px-2.5 py-2 text-xs text-neutral-300">
+              <input
+                type="checkbox"
+                checked={cleanAudio}
+                onChange={(event) => setCleanAudio(event.target.checked)}
+                disabled={isReprocessing}
+                className="mt-0.5 h-3.5 w-3.5 accent-cyan-400"
+              />
+              <span>
+                <span className="block font-medium text-neutral-200">Clean Audio</span>
+                <span className="block text-[10px] leading-4 text-neutral-500">
+                  Mute non-vocal background noise after rendering.
+                </span>
+              </span>
+            </label>
+
             <div className="flex items-center justify-between gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setAdjustments(baseSettings)}
+                onClick={() => {
+                  setAdjustments(baseSettings);
+                  setCleanAudio(Boolean(candidate.voice_cleaning?.enabled));
+                }}
                 disabled={isReprocessing}
                 className="text-xs text-neutral-500 hover:text-neutral-300 disabled:opacity-40"
               >
@@ -301,12 +336,12 @@ export function CandidateCard({
               </button>
               <button
                 type="button"
-                onClick={() => onReprocess(adjustments)}
+                onClick={() => onReprocess(adjustments, cleanAudio)}
                 disabled={isReprocessing}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-500 px-3 py-1.5 text-xs font-semibold text-black hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isReprocessing ? 'animate-spin' : ''}`} />
-                {isReprocessing ? 'Rendering' : 'Reprocess'}
+                {isReprocessing ? (cleanAudio ? 'Cleaning' : 'Rendering') : 'Reprocess'}
               </button>
             </div>
           </div>

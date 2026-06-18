@@ -60,6 +60,7 @@ export function MasteringStudio() {
   const [showClipCompare, setShowClipCompare] = useState(false);
   const [isApplyingFullSong, setIsApplyingFullSong] = useState(false);
   const lastClipAdjustmentsRef = useRef<MasteringAdjustments | null>(null);
+  const lastClipCleanAudioRef = useRef(false);
   const clipUploadUrlRef = useRef<string>('');
 
   const selectedCandidate = state.recommendedCandidates.find(
@@ -260,13 +261,18 @@ export function MasteringStudio() {
     setShowClipCompare(false);
     setIsApplyingFullSong(false);
     lastClipAdjustmentsRef.current = null;
+    lastClipCleanAudioRef.current = false;
 
     const url = new URL(window.location.href);
     url.searchParams.delete('job');
     window.history.replaceState({}, '', url.toString());
   }, [reset]);
 
-  const handleReprocessCandidate = useCallback(async (candidateId: string, adjustments: MasteringAdjustments) => {
+  const handleReprocessCandidate = useCallback(async (
+    candidateId: string,
+    adjustments: MasteringAdjustments,
+    cleanAudio: boolean,
+  ) => {
     if (!state.masterCommandId) return;
     try {
       setReprocessingCandidateId(candidateId);
@@ -274,6 +280,19 @@ export function MasteringStudio() {
         commandId: state.masterCommandId,
         candidateId,
         adjustments,
+        cleanAudio,
+        voiceGateOptions: cleanAudio
+          ? {
+              mode: 'conservative',
+              attenuation_db: -80,
+              padding_ms: 190,
+              attack_ms: 25,
+              release_ms: 140,
+              min_voice_ms: 140,
+              min_gap_ms: 180,
+              fail_on_no_voice: true,
+            }
+          : undefined,
         previewSeconds: 75,
       });
       updateCandidate(result.candidate, result.processing_log);
@@ -311,6 +330,7 @@ export function MasteringStudio() {
       });
 
       lastClipAdjustmentsRef.current = adjustments as MasteringAdjustments;
+      lastClipCleanAudioRef.current = false;
       setClipPreviewUrl(result.candidate.preview_file.storage_url);
       setShowClipCompare(true);
     } catch (err) {
@@ -329,6 +349,19 @@ export function MasteringStudio() {
         commandId: state.masterCommandId,
         candidateId: state.selectedCandidateId,
         adjustments: lastClipAdjustmentsRef.current,
+        cleanAudio: lastClipCleanAudioRef.current,
+        voiceGateOptions: lastClipCleanAudioRef.current
+          ? {
+              mode: 'conservative',
+              attenuation_db: -80,
+              padding_ms: 190,
+              attack_ms: 25,
+              release_ms: 140,
+              min_voice_ms: 140,
+              min_gap_ms: 180,
+              fail_on_no_voice: true,
+            }
+          : undefined,
         previewSeconds: 75,
       });
       updateCandidate(result.candidate, result.processing_log);
@@ -342,6 +375,7 @@ export function MasteringStudio() {
       setClipPreviewUrl('');
       setClipRegion(null);
       lastClipAdjustmentsRef.current = null;
+      lastClipCleanAudioRef.current = false;
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -354,10 +388,11 @@ export function MasteringStudio() {
     setClipRegion(null);
     setShowClipCompare(false);
     lastClipAdjustmentsRef.current = null;
+    lastClipCleanAudioRef.current = false;
     clipUploadUrlRef.current = '';
   }, []);
 
-  const handleReprocessClip = useCallback(async (adjustments: MasteringAdjustments) => {
+  const handleReprocessClip = useCallback(async (adjustments: MasteringAdjustments, cleanAudio: boolean) => {
     if (!state.masterCommandId || !state.selectedCandidateId || !clipRegion) return;
 
     try {
@@ -375,11 +410,25 @@ export function MasteringStudio() {
         commandId: state.masterCommandId,
         candidateId: state.selectedCandidateId,
         adjustments,
+        cleanAudio,
+        voiceGateOptions: cleanAudio
+          ? {
+              mode: 'conservative',
+              attenuation_db: -80,
+              padding_ms: 190,
+              attack_ms: 25,
+              release_ms: 140,
+              min_voice_ms: 140,
+              min_gap_ms: 180,
+              fail_on_no_voice: true,
+            }
+          : undefined,
         previewSeconds: Math.ceil(clipDuration),
         audioUrl: clipUploadUrlRef.current,
       });
 
       lastClipAdjustmentsRef.current = adjustments;
+      lastClipCleanAudioRef.current = cleanAudio;
       setClipPreviewUrl(result.candidate.preview_file.storage_url);
       setShowClipCompare(true);
     } catch (err) {
@@ -624,7 +673,7 @@ export function MasteringStudio() {
                     onSelect={() => selectCandidate(candidate.candidate_id)}
                     onPlay={() => setPlayingCandidate(candidate.candidate_id)}
                     onShowLogs={() => setLogCandidateId(candidate.candidate_id)}
-                    onReprocess={(adjustments) => handleReprocessCandidate(candidate.candidate_id, adjustments)}
+                    onReprocess={(adjustments, cleanAudio) => handleReprocessCandidate(candidate.candidate_id, adjustments, cleanAudio)}
                     isReprocessing={reprocessingCandidateId === candidate.candidate_id}
                     rank={idx + 1}
                   />

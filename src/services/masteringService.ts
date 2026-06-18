@@ -7,6 +7,7 @@ import type {
   ProfilesResponse,
   ReprocessCandidateResponse,
   SourceAnalysis,
+  VoiceGateOptions,
 } from '../types/mastering';
 
 export async function getProfiles(): Promise<ProfilesResponse> {
@@ -80,6 +81,8 @@ export async function reprocessCandidate(params: {
   commandId: string;
   candidateId: string;
   adjustments: MasteringAdjustments;
+  cleanAudio?: boolean;
+  voiceGateOptions?: VoiceGateOptions;
   previewSeconds?: number;
   audioUrl?: string;
 }): Promise<ReprocessCandidateResponse> {
@@ -87,6 +90,8 @@ export async function reprocessCandidate(params: {
     command_id: params.commandId,
     candidate_id: params.candidateId,
     adjustments: params.adjustments,
+    clean_audio: params.cleanAudio || false,
+    voice_gate_options: params.voiceGateOptions,
     preview_seconds: params.previewSeconds || 75,
   };
   if (params.audioUrl) {
