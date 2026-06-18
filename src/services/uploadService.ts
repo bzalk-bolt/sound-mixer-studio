@@ -11,7 +11,7 @@ export interface UploadedAudio {
 
 function safeHeaderFilename(filename: string): string {
   return filename
-    .replace(/[/\\]/g, '-')
+    .replace(/[\/\\]/g, '-')
     .replace(/[^\w.-]/g, '_')
     .slice(0, 180) || 'upload.wav';
 }
