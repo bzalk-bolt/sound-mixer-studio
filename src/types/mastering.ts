@@ -83,6 +83,7 @@ export interface Candidate {
   };
   plan: Record<string, unknown>;
   base_plan?: Record<string, unknown>;
+  control_settings?: MasteringAdjustments;
   post_analysis: SourceAnalysis;
   score_breakdown: ScoreBreakdown;
   edit_version?: number;
