@@ -8,6 +8,7 @@ export async function createJob(params: {
   profile?: string;
   userGoal?: string;
   planner: string;
+  sourceFilename?: string;
 }) {
   const { error } = await supabase.from('mastering_jobs').insert({
     command_id: params.commandId,
@@ -16,6 +17,7 @@ export async function createJob(params: {
     profile: params.profile || null,
     user_goal: params.userGoal || null,
     planner: params.planner,
+    source_filename: params.sourceFilename || null,
     status: 'QUEUED',
   });
   if (error) throw error;
@@ -97,6 +99,18 @@ export async function getJobByCommandId(commandId: string) {
     .from('mastering_jobs')
     .select('*')
     .eq('command_id', commandId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function getLatestCompletedJob() {
+  const { data, error } = await supabase
+    .from('mastering_jobs')
+    .select('*')
+    .eq('status', 'COMPLETED')
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (error) throw error;
   return data;

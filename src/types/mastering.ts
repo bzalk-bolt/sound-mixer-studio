@@ -204,4 +204,5 @@ export interface AppState {
   errorMessage: string;
   sourceAnalysis: SourceAnalysis | null;
   profiles: ProfilesResponse | null;
+  originalCandidateUrls: Record<string, string>;
 }

@@ -15,6 +15,7 @@ const initialState: AppState = {
   errorMessage: '',
   sourceAnalysis: null,
   profiles: null,
+  originalCandidateUrls: {},
 };
 
 export function useMasteringState() {
@@ -37,12 +38,17 @@ export function useMasteringState() {
   }, []);
 
   const setCandidates = useCallback((candidates: Candidate[], analysis: SourceAnalysis | null, processingLog: ProcessingLogEntry[] = []) => {
+    const originalUrls: Record<string, string> = {};
+    for (const c of candidates) {
+      originalUrls[c.candidate_id] = c.preview_file.storage_url;
+    }
     setState((prev) => ({
       ...prev,
       recommendedCandidates: candidates,
       processingLog,
       sourceAnalysis: analysis,
       status: 'previews_ready',
+      originalCandidateUrls: { ...prev.originalCandidateUrls, ...originalUrls },
     }));
   }, []);
 
@@ -76,6 +82,33 @@ export function useMasteringState() {
     setState((prev) => ({ ...prev, profiles }));
   }, []);
 
+  const restoreSession = useCallback((params: {
+    sourceUrl: string;
+    sourceFilename: string;
+    referenceUrl: string;
+    masterCommandId: string;
+    candidates: Candidate[];
+    sourceAnalysis: SourceAnalysis | null;
+    selectedCandidateId?: string;
+  }) => {
+    const originalUrls: Record<string, string> = {};
+    for (const c of params.candidates) {
+      originalUrls[c.candidate_id] = c.preview_file.storage_url;
+    }
+    setState({
+      ...initialState,
+      sourceUrl: params.sourceUrl,
+      sourceFilename: params.sourceFilename,
+      referenceUrl: params.referenceUrl,
+      masterCommandId: params.masterCommandId,
+      recommendedCandidates: params.candidates,
+      sourceAnalysis: params.sourceAnalysis,
+      selectedCandidateId: params.selectedCandidateId || '',
+      status: 'previews_ready',
+      originalCandidateUrls: originalUrls,
+    });
+  }, []);
+
   const reset = useCallback(() => {
     setState(initialState);
   }, []);
@@ -93,6 +126,7 @@ export function useMasteringState() {
     setFinalReady,
     setError,
     setProfiles,
+    restoreSession,
     reset,
   };
 }

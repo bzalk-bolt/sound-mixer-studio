@@ -81,15 +81,20 @@ export async function reprocessCandidate(params: {
   candidateId: string;
   adjustments: MasteringAdjustments;
   previewSeconds?: number;
+  audioUrl?: string;
 }): Promise<ReprocessCandidateResponse> {
+  const body: Record<string, unknown> = {
+    command_id: params.commandId,
+    candidate_id: params.candidateId,
+    adjustments: params.adjustments,
+    preview_seconds: params.previewSeconds || 75,
+  };
+  if (params.audioUrl) {
+    body.audio_url = params.audioUrl;
+  }
   const response = await callEdgeFunction('/mastering/reprocess', {
     method: 'POST',
-    body: {
-      command_id: params.commandId,
-      candidate_id: params.candidateId,
-      adjustments: params.adjustments,
-      preview_seconds: params.previewSeconds || 75,
-    },
+    body,
   });
   return response.json();
 }
