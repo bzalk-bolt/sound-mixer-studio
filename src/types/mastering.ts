@@ -82,6 +82,7 @@ export interface Candidate {
     storage_url: string;
   };
   plan: Record<string, unknown>;
+  base_plan?: Record<string, unknown>;
   post_analysis: SourceAnalysis;
   score_breakdown: ScoreBreakdown;
   edit_version?: number;
@@ -92,9 +93,23 @@ export interface MasteringAdjustments {
   brightness: number;
   warmth: number;
   presence: number;
+  bass: number;
+  low_mid: number;
+  air: number;
   stereo_width: number;
   cleanup: number;
+  cleanup_gate: number;
+  cleanup_noise: number;
   loudness: number;
+  volume_db: number;
+  input_gain_db: number;
+  compression: number;
+  compression_threshold: number;
+  compression_attack: number;
+  compression_release: number;
+  compression_mix: number;
+  saturation: number;
+  limiter: number;
   ambience: number;
 }
 
