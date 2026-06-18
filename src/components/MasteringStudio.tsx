@@ -1,13 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMasteringState } from '../hooks/useMasteringState';
-import { masteringService, jobService, uploadService } from '../services';
+import { masteringService, jobService, uploadService, clipService } from '../services';
 import { UploadZone } from './UploadZone';
 import { ProfileSelector } from './ProfileSelector';
 import { CandidateCard } from './CandidateCard';
+import { CustomCandidateCard } from './CustomCandidateCard';
 import { AnalysisPanel } from './AnalysisPanel';
 import { ProgressIndicator } from './ProgressIndicator';
 import { ConfirmModal } from './ConfirmModal';
 import { ProcessingLogModal } from './ProcessingLogModal';
+import { WaveformSelector } from './WaveformSelector';
+import { ClipCompare } from './ClipCompare';
 import type { MasteringAdjustments } from '../types/mastering';
 import {
   Disc3,
@@ -34,6 +37,7 @@ export function MasteringStudio() {
     setFinalReady,
     setError,
     setProfiles,
+    restoreSession,
     reset,
   } = useMasteringState();
 
@@ -46,6 +50,18 @@ export function MasteringStudio() {
   const [referenceFilename, setReferenceFilename] = useState('');
   const [logCandidateId, setLogCandidateId] = useState('');
   const [reprocessingCandidateId, setReprocessingCandidateId] = useState('');
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
+
+  // Clip workflow state
+  const [isClipProcessing, setIsClipProcessing] = useState(false);
+  const [isClipReprocessing, setIsClipReprocessing] = useState(false);
+  const [clipPreviewUrl, setClipPreviewUrl] = useState('');
+  const [clipRegion, setClipRegion] = useState<{ start: number; end: number } | null>(null);
+  const [showClipCompare, setShowClipCompare] = useState(false);
+  const [isApplyingFullSong, setIsApplyingFullSong] = useState(false);
+  const lastClipAdjustmentsRef = useRef<MasteringAdjustments | null>(null);
+  const clipUploadUrlRef = useRef<string>('');
+
   const selectedCandidate = state.recommendedCandidates.find(
     (candidate) => candidate.candidate_id === state.selectedCandidateId,
   );
@@ -53,11 +69,54 @@ export function MasteringStudio() {
     (candidate) => candidate.candidate_id === logCandidateId,
   ) || null;
 
+  const originalWaveformUrl = state.selectedCandidateId
+    ? state.originalCandidateUrls[state.selectedCandidateId] || selectedCandidate?.preview_file.storage_url || ''
+    : '';
+
   useEffect(() => {
     masteringService.getProfiles()
       .then(setProfiles)
       .catch(() => {});
   }, [setProfiles]);
+
+  useEffect(() => {
+    async function tryRestore() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const jobParam = params.get('job');
+
+        let job = null;
+        if (jobParam) {
+          job = await jobService.getJobByCommandId(jobParam);
+        }
+        if (!job) {
+          job = await jobService.getLatestCompletedJob();
+        }
+
+        if (job && job.status === 'COMPLETED' && job.recommended_candidates) {
+          restoreSession({
+            sourceUrl: job.audio_url,
+            sourceFilename: job.source_filename || '',
+            referenceUrl: job.reference_url || '',
+            masterCommandId: job.command_id,
+            candidates: job.recommended_candidates,
+            sourceAnalysis: job.source_analysis || null,
+          });
+          if (job.profile) setSelectedProfile(job.profile);
+          if (job.user_goal) setUserGoal(job.user_goal);
+
+          const url = new URL(window.location.href);
+          url.searchParams.set('job', job.command_id);
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch {
+        // silent - just start fresh
+      } finally {
+        setIsRestoringSession(false);
+      }
+    }
+    tryRestore();
+  }, [restoreSession]);
 
   const handleSourceFile = useCallback(async (file: File) => {
     try {
@@ -111,7 +170,12 @@ export function MasteringStudio() {
         profile: selectedProfile || undefined,
         userGoal: userGoal || undefined,
         planner: 'auto',
+        sourceFilename: state.sourceFilename || undefined,
       }).catch(() => {});
+
+      const url = new URL(window.location.href);
+      url.searchParams.set('job', command_id);
+      window.history.replaceState({}, '', url.toString());
 
       const progressMessages = [
         'Analyzing audio...',
@@ -191,6 +255,15 @@ export function MasteringStudio() {
     setShowAnalysis(false);
     setLogCandidateId('');
     setReprocessingCandidateId('');
+    setClipPreviewUrl('');
+    setClipRegion(null);
+    setShowClipCompare(false);
+    setIsApplyingFullSong(false);
+    lastClipAdjustmentsRef.current = null;
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('job');
+    window.history.replaceState({}, '', url.toString());
   }, [reset]);
 
   const handleReprocessCandidate = useCallback(async (candidateId: string, adjustments: MasteringAdjustments) => {
@@ -215,6 +288,129 @@ export function MasteringStudio() {
       setReprocessingCandidateId('');
     }
   }, [state.masterCommandId, state.recommendedCandidates, updateCandidate, setError]);
+
+  const handleProcessClip = useCallback(async (clipFile: File, startSec: number, endSec: number) => {
+    if (!state.masterCommandId || !state.selectedCandidateId || !selectedCandidate) return;
+
+    try {
+      setIsClipProcessing(true);
+      setClipRegion({ start: startSec, end: endSec });
+
+      const upload = await uploadService.uploadAudioFile(clipFile);
+      clipUploadUrlRef.current = upload.audioUrl;
+
+      const adjustments = selectedCandidate.control_settings || selectedCandidate.last_adjustments;
+      const clipDuration = endSec - startSec;
+
+      const result = await masteringService.reprocessCandidate({
+        commandId: state.masterCommandId,
+        candidateId: state.selectedCandidateId,
+        adjustments: adjustments as MasteringAdjustments,
+        previewSeconds: Math.ceil(clipDuration),
+        audioUrl: upload.audioUrl,
+      });
+
+      lastClipAdjustmentsRef.current = adjustments as MasteringAdjustments;
+      setClipPreviewUrl(result.candidate.preview_file.storage_url);
+      setShowClipCompare(true);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsClipProcessing(false);
+    }
+  }, [state.masterCommandId, state.selectedCandidateId, selectedCandidate, setError]);
+
+  const handleApplyFullSong = useCallback(async () => {
+    if (!state.masterCommandId || !state.selectedCandidateId || !lastClipAdjustmentsRef.current) return;
+
+    try {
+      setIsApplyingFullSong(true);
+      const result = await masteringService.reprocessCandidate({
+        commandId: state.masterCommandId,
+        candidateId: state.selectedCandidateId,
+        adjustments: lastClipAdjustmentsRef.current,
+        previewSeconds: 75,
+      });
+      updateCandidate(result.candidate, result.processing_log);
+      await jobService.updateJobStatus(state.masterCommandId, 'COMPLETED', {
+        recommendedCandidates: state.recommendedCandidates.map((candidate) =>
+          candidate.candidate_id === result.candidate.candidate_id ? result.candidate : candidate,
+        ),
+      }).catch(() => {});
+
+      setShowClipCompare(false);
+      setClipPreviewUrl('');
+      setClipRegion(null);
+      lastClipAdjustmentsRef.current = null;
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsApplyingFullSong(false);
+    }
+  }, [state.masterCommandId, state.selectedCandidateId, state.recommendedCandidates, updateCandidate, setError]);
+
+  const handleResetClip = useCallback(() => {
+    setClipPreviewUrl('');
+    setClipRegion(null);
+    setShowClipCompare(false);
+    lastClipAdjustmentsRef.current = null;
+    clipUploadUrlRef.current = '';
+  }, []);
+
+  const handleReprocessClip = useCallback(async (adjustments: MasteringAdjustments) => {
+    if (!state.masterCommandId || !state.selectedCandidateId || !clipRegion) return;
+
+    try {
+      setIsClipReprocessing(true);
+
+      if (!clipUploadUrlRef.current) {
+        const clipFile = await clipService.clipAudioFromUrl(originalWaveformUrl, clipRegion.start, clipRegion.end);
+        const upload = await uploadService.uploadAudioFile(clipFile);
+        clipUploadUrlRef.current = upload.audioUrl;
+      }
+
+      const clipDuration = clipRegion.end - clipRegion.start;
+
+      const result = await masteringService.reprocessCandidate({
+        commandId: state.masterCommandId,
+        candidateId: state.selectedCandidateId,
+        adjustments,
+        previewSeconds: Math.ceil(clipDuration),
+        audioUrl: clipUploadUrlRef.current,
+      });
+
+      lastClipAdjustmentsRef.current = adjustments;
+      setClipPreviewUrl(result.candidate.preview_file.storage_url);
+      setShowClipCompare(true);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsClipReprocessing(false);
+    }
+  }, [state.masterCommandId, state.selectedCandidateId, clipRegion, originalWaveformUrl, setError]);
+
+  const handleSaveAsCandidate = useCallback((_name: string, _adjustments: MasteringAdjustments) => {
+    // Future: save custom as a named 4th candidate
+  }, []);
+
+  const clipCandidateLabel = selectedCandidate
+    ? `${selectedCandidate.style} / ${selectedCandidate.loudness}`
+    : 'Custom';
+
+  const clipSettingsSummary = (() => {
+    const adj = selectedCandidate?.control_settings || selectedCandidate?.last_adjustments;
+    if (!adj) return '';
+    const parts: string[] = [];
+    if (adj.brightness !== 0) parts.push(`Bright ${adj.brightness > 0 ? '+' : ''}${adj.brightness.toFixed(1)}`);
+    if (adj.warmth !== 0) parts.push(`Warm ${adj.warmth > 0 ? '+' : ''}${adj.warmth.toFixed(1)}`);
+    if (adj.bass !== 0) parts.push(`Bass ${adj.bass > 0 ? '+' : ''}${adj.bass.toFixed(1)}`);
+    if (adj.presence !== 0) parts.push(`Pres ${adj.presence > 0 ? '+' : ''}${adj.presence.toFixed(1)}`);
+    if (adj.loudness !== 0) parts.push(`Loud ${adj.loudness > 0 ? '+' : ''}${adj.loudness.toFixed(1)}`);
+    if (adj.compression !== 0) parts.push(`Comp ${adj.compression > 0 ? '+' : ''}${adj.compression.toFixed(1)}`);
+    if (adj.stereo_width !== 0) parts.push(`Width ${adj.stereo_width > 0 ? '+' : ''}${adj.stereo_width.toFixed(1)}`);
+    if (adj.saturation !== 0) parts.push(`Sat ${adj.saturation > 0 ? '+' : ''}${adj.saturation.toFixed(1)}`);
+    return parts.length > 0 ? parts.join(', ') : 'Default settings (no adjustments)';
+  })();
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
@@ -242,7 +438,16 @@ export function MasteringStudio() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
-        {state.status === 'idle' && (
+        {isRestoringSession && (
+          <div className="flex items-center justify-center py-20">
+            <div className="flex items-center gap-3 text-neutral-400 text-sm">
+              <Clock className="w-4 h-4 animate-pulse" />
+              Restoring session...
+            </div>
+          </div>
+        )}
+
+        {!isRestoringSession && state.status === 'idle' && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <div className="text-center max-w-lg mx-auto mb-12">
               <h2 className="text-2xl font-bold tracking-tight mb-2">Master your mix with AI</h2>
@@ -349,6 +554,45 @@ export function MasteringStudio() {
                 </button>
               )}
             </div>
+
+            {/* Waveform Clip Selector */}
+            {state.selectedCandidateId && originalWaveformUrl && (
+              <WaveformSelector
+                audioUrl={originalWaveformUrl}
+                onProcessClip={handleProcessClip}
+                onResetClip={handleResetClip}
+                onSelectionChange={(region) => setClipRegion(region)}
+                isProcessing={isClipProcessing}
+                isLocked={showClipCompare}
+              />
+            )}
+
+            {/* Clip A/B Compare */}
+            {showClipCompare && clipPreviewUrl && clipRegion && originalWaveformUrl && (
+              <ClipCompare
+                originalUrl={originalWaveformUrl}
+                processedUrl={clipPreviewUrl}
+                regionStart={clipRegion.start}
+                regionEnd={clipRegion.end}
+                onClose={handleResetClip}
+                onApplyFullSong={handleApplyFullSong}
+                isApplying={isApplyingFullSong}
+                isReprocessing={isClipReprocessing}
+                candidateLabel={clipCandidateLabel}
+                settingsSummary={clipSettingsSummary}
+              />
+            )}
+
+            {/* Custom Remix Card - shows as soon as a region is selected */}
+            {clipRegion && selectedCandidate && (
+              <CustomCandidateCard
+                baseCandidate={selectedCandidate}
+                onReprocessClip={handleReprocessClip}
+                onSaveAsCandidate={handleSaveAsCandidate}
+                isReprocessing={isClipReprocessing}
+                hasClipResult={!!clipPreviewUrl}
+              />
+            )}
 
             {showAnalysis && state.sourceAnalysis && (
               <div className="space-y-5 animate-in slide-in-from-top-2 duration-300">
