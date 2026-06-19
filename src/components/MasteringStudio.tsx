@@ -453,10 +453,16 @@ export function MasteringStudio() {
     if (adj.brightness !== 0) parts.push(`Bright ${adj.brightness > 0 ? '+' : ''}${adj.brightness.toFixed(1)}`);
     if (adj.warmth !== 0) parts.push(`Warm ${adj.warmth > 0 ? '+' : ''}${adj.warmth.toFixed(1)}`);
     if (adj.bass !== 0) parts.push(`Bass ${adj.bass > 0 ? '+' : ''}${adj.bass.toFixed(1)}`);
+    if (adj.body !== 0) parts.push(`Body ${adj.body > 0 ? '+' : ''}${adj.body.toFixed(1)}`);
+    if (adj.boxiness !== 0) parts.push(`Boxy ${adj.boxiness > 0 ? '+' : ''}${adj.boxiness.toFixed(1)}`);
     if (adj.presence !== 0) parts.push(`Pres ${adj.presence > 0 ? '+' : ''}${adj.presence.toFixed(1)}`);
+    if (adj.harshness !== 0) parts.push(`Harsh ${adj.harshness > 0 ? '+' : ''}${adj.harshness.toFixed(1)}`);
+    if (adj.de_ess !== 0) parts.push(`De-ess ${adj.de_ess.toFixed(2)}`);
     if (adj.loudness !== 0) parts.push(`Loud ${adj.loudness > 0 ? '+' : ''}${adj.loudness.toFixed(1)}`);
     if (adj.compression !== 0) parts.push(`Comp ${adj.compression > 0 ? '+' : ''}${adj.compression.toFixed(1)}`);
+    if (adj.dynamic_eq !== 0) parts.push(`DynEQ ${adj.dynamic_eq.toFixed(2)}`);
     if (adj.stereo_width !== 0) parts.push(`Width ${adj.stereo_width > 0 ? '+' : ''}${adj.stereo_width.toFixed(1)}`);
+    if (adj.mono_bass !== 0) parts.push(`MonoBass ${adj.mono_bass.toFixed(2)}`);
     if (adj.saturation !== 0) parts.push(`Sat ${adj.saturation > 0 ? '+' : ''}${adj.saturation.toFixed(1)}`);
     return parts.length > 0 ? parts.join(', ') : 'Default settings (no adjustments)';
   })();

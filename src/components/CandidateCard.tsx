@@ -22,6 +22,12 @@ const fallbackSettings: MasteringAdjustments = {
   bass: 0,
   low_mid: 0,
   air: 0,
+  de_ess: 0,
+  harshness: 0,
+  boxiness: 0,
+  body: 0,
+  mono_bass: 0,
+  dynamic_eq: 0,
   stereo_width: 0,
   cleanup: 0.06,
   cleanup_gate: -45,
@@ -288,7 +294,11 @@ export function CandidateCard({
             <AdjustmentSlider label="Presence" value={adjustments.presence} min={-4.5} max={4.5} step={0.1} onChange={(value) => setAdjustment('presence', value)} />
             <AdjustmentSlider label="Bass" value={adjustments.bass} min={-4.5} max={4.5} step={0.1} onChange={(value) => setAdjustment('bass', value)} />
             <AdjustmentSlider label="Low Mid" value={adjustments.low_mid} min={-4.5} max={4.5} step={0.1} onChange={(value) => setAdjustment('low_mid', value)} />
+            <AdjustmentSlider label="Body" value={adjustments.body} min={-4.5} max={4.5} step={0.1} onChange={(value) => setAdjustment('body', value)} />
+            <AdjustmentSlider label="Boxy" value={adjustments.boxiness} min={-4.5} max={4.5} step={0.1} onChange={(value) => setAdjustment('boxiness', value)} />
+            <AdjustmentSlider label="Harsh" value={adjustments.harshness} min={-4.5} max={4.5} step={0.1} onChange={(value) => setAdjustment('harshness', value)} />
             <AdjustmentSlider label="Air" value={adjustments.air} min={-4.5} max={4.5} step={0.1} onChange={(value) => setAdjustment('air', value)} />
+            <AdjustmentSlider label="De-ess" value={adjustments.de_ess} min={0} max={1} step={0.05} digits={2} onChange={(value) => setAdjustment('de_ess', value)} />
 
             <div className="pt-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Dynamics</div>
             <AdjustmentSlider label="Ratio" value={adjustments.compression} min={1.1} max={3} step={0.1} onChange={(value) => setAdjustment('compression', value)} />
@@ -296,11 +306,13 @@ export function CandidateCard({
             <AdjustmentSlider label="Attack" value={adjustments.compression_attack} min={5} max={80} step={1} digits={0} onChange={(value) => setAdjustment('compression_attack', value)} />
             <AdjustmentSlider label="Release" value={adjustments.compression_release} min={50} max={300} step={5} digits={0} onChange={(value) => setAdjustment('compression_release', value)} />
             <AdjustmentSlider label="Comp Mix" value={adjustments.compression_mix} min={0.35} max={1} step={0.05} digits={2} onChange={(value) => setAdjustment('compression_mix', value)} />
+            <AdjustmentSlider label="Dyn EQ" value={adjustments.dynamic_eq} min={0} max={1} step={0.05} digits={2} onChange={(value) => setAdjustment('dynamic_eq', value)} />
             <AdjustmentSlider label="Saturate" value={adjustments.saturation} min={0} max={0.08} step={0.005} digits={3} onChange={(value) => setAdjustment('saturation', value)} />
             <AdjustmentSlider label="Limiter" value={adjustments.limiter} min={-3} max={-1.5} step={0.1} onChange={(value) => setAdjustment('limiter', value)} />
 
             <div className="pt-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">Space & Cleanup</div>
             <AdjustmentSlider label="Stereo" value={adjustments.stereo_width} min={0} max={0.18} step={0.005} digits={3} onChange={(value) => setAdjustment('stereo_width', value)} />
+            <AdjustmentSlider label="Mono Bass" value={adjustments.mono_bass} min={0} max={1} step={0.05} digits={2} onChange={(value) => setAdjustment('mono_bass', value)} />
             <AdjustmentSlider label="Gate Rng" value={adjustments.cleanup} min={0.003} max={0.2} step={0.005} digits={3} onChange={(value) => setAdjustment('cleanup', value)} />
             <AdjustmentSlider label="Gate dB" value={adjustments.cleanup_gate} min={-60} max={-28} step={0.5} onChange={(value) => setAdjustment('cleanup_gate', value)} />
             <AdjustmentSlider label="Denoise" value={adjustments.cleanup_noise} min={0} max={24} step={0.5} onChange={(value) => setAdjustment('cleanup_noise', value)} />

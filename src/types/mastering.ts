@@ -98,6 +98,12 @@ export interface MasteringAdjustments {
   bass: number;
   low_mid: number;
   air: number;
+  de_ess: number;
+  harshness: number;
+  boxiness: number;
+  body: number;
+  mono_bass: number;
+  dynamic_eq: number;
   stereo_width: number;
   cleanup: number;
   cleanup_gate: number;
