@@ -198,6 +198,7 @@ export interface DebugArtifacts {
 export interface MasteringJobResult {
   command_id: string;
   status: JobStatus;
+  source_url?: string;
   source_analysis?: SourceAnalysis;
   reference_analysis?: SourceAnalysis | null;
   target_profile?: Record<string, unknown>;

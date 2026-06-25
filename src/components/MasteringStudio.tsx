@@ -96,15 +96,32 @@ export function MasteringStudio() {
           job = await jobService.getLatestCompletedJob();
         }
 
-        if (job && job.status === 'COMPLETED' && job.recommended_candidates) {
+        let apiJob = null;
+        if (job?.command_id) {
+          try {
+            apiJob = await masteringService.getJob(job.command_id);
+          } catch {
+            apiJob = null;
+          }
+        }
+
+        const restoredStatus = apiJob?.status || job?.status;
+        const restoredCandidates = apiJob?.recommended_candidates?.length
+          ? apiJob.recommended_candidates
+          : job?.recommended_candidates;
+        const restoredSourceAnalysis = apiJob?.source_analysis || job?.source_analysis || null;
+        const restoredDebugArtifacts = apiJob?.debug_artifacts || job?.debug_artifacts || null;
+        const restoredSourceUrl = job?.audio_url || apiJob?.source_url || '';
+
+        if (job && restoredStatus === 'COMPLETED' && restoredCandidates) {
           restoreSession({
-            sourceUrl: job.audio_url,
+            sourceUrl: restoredSourceUrl,
             sourceFilename: job.source_filename || '',
             referenceUrl: job.reference_url || '',
             masterCommandId: job.command_id,
-            candidates: job.recommended_candidates,
-            sourceAnalysis: job.source_analysis || null,
-            debugArtifacts: job.debug_artifacts || null,
+            candidates: restoredCandidates,
+            sourceAnalysis: restoredSourceAnalysis,
+            debugArtifacts: restoredDebugArtifacts,
           });
           if (job.profile) setSelectedProfile(job.profile);
           if (job.user_goal) setUserGoal(job.user_goal);
