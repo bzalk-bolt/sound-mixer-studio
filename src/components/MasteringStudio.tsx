@@ -608,7 +608,7 @@ export function MasteringStudio() {
               <div>
                 <h2 className="text-lg font-bold tracking-tight">Mastering Candidates</h2>
                 <p className="text-xs text-neutral-500 mt-0.5">
-                  {state.recommendedCandidates.length} candidates generated. Select your preferred master.
+                  {state.recommendedCandidates.length} presets loaded. Select one to adjust or reprocess.
                 </p>
               </div>
               {state.sourceAnalysis && (

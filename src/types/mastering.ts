@@ -86,6 +86,9 @@ export interface Candidate {
   control_settings?: MasteringAdjustments;
   post_analysis: SourceAnalysis;
   score_breakdown: ScoreBreakdown;
+  scoring_status?: 'skipped' | 'scored';
+  render_status?: 'not_rendered' | 'rendered';
+  preview_status?: 'source_audio' | 'processed_preview';
   edit_version?: number;
   last_adjustments?: MasteringAdjustments;
   voice_cleaning?: VoiceCleaningResult;
