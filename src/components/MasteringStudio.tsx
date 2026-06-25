@@ -305,6 +305,7 @@ export function MasteringStudio() {
         previewSeconds: 75,
       });
       updateCandidate(result.candidate, result.processing_log);
+      setDebugArtifacts(result.debug_artifacts || null);
       await jobService.updateJobStatus(state.masterCommandId, 'COMPLETED', {
         recommendedCandidates: state.recommendedCandidates.map((candidate) =>
           candidate.candidate_id === result.candidate.candidate_id ? result.candidate : candidate,
@@ -315,7 +316,7 @@ export function MasteringStudio() {
     } finally {
       setReprocessingCandidateId('');
     }
-  }, [state.masterCommandId, state.recommendedCandidates, updateCandidate, setError]);
+  }, [state.masterCommandId, state.recommendedCandidates, updateCandidate, setDebugArtifacts, setError]);
 
   const handleProcessClip = useCallback(async (clipFile: File, startSec: number, endSec: number) => {
     if (!state.masterCommandId || !state.selectedCandidateId || !selectedCandidate) return;
@@ -341,13 +342,14 @@ export function MasteringStudio() {
       lastClipAdjustmentsRef.current = adjustments as MasteringAdjustments;
       lastClipCleanAudioRef.current = false;
       setClipPreviewUrl(result.candidate.preview_file.storage_url);
+      setDebugArtifacts(result.debug_artifacts || null);
       setShowClipCompare(true);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setIsClipProcessing(false);
     }
-  }, [state.masterCommandId, state.selectedCandidateId, selectedCandidate, setError]);
+  }, [state.masterCommandId, state.selectedCandidateId, selectedCandidate, setDebugArtifacts, setError]);
 
   const handleApplyFullSong = useCallback(async () => {
     if (!state.masterCommandId || !state.selectedCandidateId || !lastClipAdjustmentsRef.current) return;
@@ -374,6 +376,7 @@ export function MasteringStudio() {
         previewSeconds: 75,
       });
       updateCandidate(result.candidate, result.processing_log);
+      setDebugArtifacts(result.debug_artifacts || null);
       await jobService.updateJobStatus(state.masterCommandId, 'COMPLETED', {
         recommendedCandidates: state.recommendedCandidates.map((candidate) =>
           candidate.candidate_id === result.candidate.candidate_id ? result.candidate : candidate,
@@ -390,7 +393,7 @@ export function MasteringStudio() {
     } finally {
       setIsApplyingFullSong(false);
     }
-  }, [state.masterCommandId, state.selectedCandidateId, state.recommendedCandidates, updateCandidate, setError]);
+  }, [state.masterCommandId, state.selectedCandidateId, state.recommendedCandidates, updateCandidate, setDebugArtifacts, setError]);
 
   const handleResetClip = useCallback(() => {
     setClipPreviewUrl('');
@@ -439,13 +442,14 @@ export function MasteringStudio() {
       lastClipAdjustmentsRef.current = adjustments;
       lastClipCleanAudioRef.current = cleanAudio;
       setClipPreviewUrl(result.candidate.preview_file.storage_url);
+      setDebugArtifacts(result.debug_artifacts || null);
       setShowClipCompare(true);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setIsClipReprocessing(false);
     }
-  }, [state.masterCommandId, state.selectedCandidateId, clipRegion, originalWaveformUrl, setError]);
+  }, [state.masterCommandId, state.selectedCandidateId, clipRegion, originalWaveformUrl, setDebugArtifacts, setError]);
 
   const handleSaveAsCandidate = useCallback((_name: string, _adjustments: MasteringAdjustments) => {
     // Future: save custom as a named 4th candidate

@@ -266,6 +266,8 @@ export interface MasteringRequest {
 export interface ReprocessCandidateResponse {
   success: boolean;
   candidate: Candidate;
+  debug_artifacts?: DebugArtifacts;
+  debug_error?: string;
   processing_log?: ProcessingLogEntry[];
 }
 
