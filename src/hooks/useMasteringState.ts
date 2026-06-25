@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { AppState, AppStatus, Candidate, ProcessingLogEntry, ProfilesResponse, SourceAnalysis } from '../types/mastering';
+import type { AppState, AppStatus, Candidate, DebugArtifacts, ProcessingLogEntry, ProfilesResponse, SourceAnalysis } from '../types/mastering';
 
 const initialState: AppState = {
   sourceUrl: '',
@@ -14,6 +14,7 @@ const initialState: AppState = {
   finalDownloadUrl: '',
   errorMessage: '',
   sourceAnalysis: null,
+  debugArtifacts: null,
   profiles: null,
   originalCandidateUrls: {},
 };
@@ -50,6 +51,10 @@ export function useMasteringState() {
       status: 'previews_ready',
       originalCandidateUrls: { ...prev.originalCandidateUrls, ...originalUrls },
     }));
+  }, []);
+
+  const setDebugArtifacts = useCallback((debugArtifacts: DebugArtifacts | null) => {
+    setState((prev) => ({ ...prev, debugArtifacts }));
   }, []);
 
   const selectCandidate = useCallback((id: string) => {
@@ -89,6 +94,7 @@ export function useMasteringState() {
     masterCommandId: string;
     candidates: Candidate[];
     sourceAnalysis: SourceAnalysis | null;
+    debugArtifacts?: DebugArtifacts | null;
     selectedCandidateId?: string;
   }) => {
     const originalUrls: Record<string, string> = {};
@@ -103,6 +109,7 @@ export function useMasteringState() {
       masterCommandId: params.masterCommandId,
       recommendedCandidates: params.candidates,
       sourceAnalysis: params.sourceAnalysis,
+      debugArtifacts: params.debugArtifacts || null,
       selectedCandidateId: params.selectedCandidateId || '',
       status: 'previews_ready',
       originalCandidateUrls: originalUrls,
@@ -120,6 +127,7 @@ export function useMasteringState() {
     setReference,
     setMasterCommandId,
     setCandidates,
+    setDebugArtifacts,
     selectCandidate,
     updateCandidate,
     setFinalizing,

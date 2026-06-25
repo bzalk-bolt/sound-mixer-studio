@@ -157,6 +157,41 @@ export interface VoiceCleaningResult {
   filtergraph?: string;
 }
 
+export interface DebugWaveformSummary {
+  peak?: number | null;
+  rms_db_p50?: number | null;
+  rms_db_p75?: number | null;
+}
+
+export interface DebugFileRef {
+  storage_url: string;
+  summary?: DebugWaveformSummary;
+}
+
+export interface DebugStageArtifact {
+  order: number;
+  key: string;
+  label: string;
+  mix: DebugFileRef;
+  waveform?: DebugFileRef;
+  compare_to?: string;
+  summary?: DebugWaveformSummary;
+  stage_filters?: string[];
+}
+
+export interface DebugArtifacts {
+  enabled?: boolean;
+  kind?: string;
+  public_base_url?: string;
+  base?: {
+    original_vocal_waveform?: DebugFileRef;
+    [key: string]: DebugFileRef | undefined;
+  };
+  stages?: DebugStageArtifact[];
+  reference?: Record<string, DebugFileRef>;
+  error?: string;
+}
+
 export interface MasteringJobResult {
   command_id: string;
   status: JobStatus;
@@ -170,6 +205,8 @@ export interface MasteringJobResult {
   };
   candidate_scores?: Candidate[];
   recommended_candidates?: Candidate[];
+  debug_artifacts?: DebugArtifacts;
+  debug_error?: string;
   processing_log?: ProcessingLogEntry[];
   output_filename?: string;
   error_message?: string;
@@ -240,6 +277,7 @@ export interface AppState {
   finalDownloadUrl: string;
   errorMessage: string;
   sourceAnalysis: SourceAnalysis | null;
+  debugArtifacts: DebugArtifacts | null;
   profiles: ProfilesResponse | null;
   originalCandidateUrls: Record<string, string>;
 }

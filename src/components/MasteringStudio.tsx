@@ -11,6 +11,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { ProcessingLogModal } from './ProcessingLogModal';
 import { WaveformSelector } from './WaveformSelector';
 import { ClipCompare } from './ClipCompare';
+import { DebugArtifactsPanel } from './DebugArtifactsPanel';
 import type { MasteringAdjustments } from '../types/mastering';
 import {
   Disc3,
@@ -37,6 +38,7 @@ export function MasteringStudio() {
     setFinalReady,
     setError,
     setProfiles,
+    setDebugArtifacts,
     restoreSession,
     reset,
   } = useMasteringState();
@@ -102,6 +104,7 @@ export function MasteringStudio() {
             masterCommandId: job.command_id,
             candidates: job.recommended_candidates,
             sourceAnalysis: job.source_analysis || null,
+            debugArtifacts: job.debug_artifacts || null,
           });
           if (job.profile) setSelectedProfile(job.profile);
           if (job.user_goal) setUserGoal(job.user_goal);
@@ -191,12 +194,17 @@ export function MasteringStudio() {
         setProgressLabel(progressMessages[msgIdx]);
       }, 5000);
 
-      const result = await masteringService.pollJob(command_id);
+      const result = await masteringService.pollJob(command_id, (job) => {
+        if (job.debug_artifacts) {
+          setDebugArtifacts(job.debug_artifacts);
+        }
+      });
 
       clearInterval(msgInterval);
 
       if (result.recommended_candidates && result.recommended_candidates.length > 0) {
         setCandidates(result.recommended_candidates, result.source_analysis || null, result.processing_log || []);
+        setDebugArtifacts(result.debug_artifacts || null);
         await jobService.updateJobStatus(command_id, 'COMPLETED', {
           sourceAnalysis: result.source_analysis,
           recommendedCandidates: result.recommended_candidates,
@@ -207,7 +215,7 @@ export function MasteringStudio() {
     } catch (err) {
       setError((err as Error).message);
     }
-  }, [state.sourceUrl, state.referenceUrl, state.sourceFilename, selectedProfile, userGoal, setMasterCommandId, setCandidates, setError]);
+  }, [state.sourceUrl, state.referenceUrl, state.sourceFilename, selectedProfile, userGoal, setMasterCommandId, setCandidates, setDebugArtifacts, setError]);
 
   const handleFinalize = useCallback(async () => {
     if (!state.selectedCandidateId || !state.masterCommandId) return;
@@ -255,6 +263,7 @@ export function MasteringStudio() {
     setReferenceFilename('');
     setShowAnalysis(false);
     setLogCandidateId('');
+    setDebugArtifacts(null);
     setReprocessingCandidateId('');
     setClipPreviewUrl('');
     setClipRegion(null);
@@ -266,7 +275,7 @@ export function MasteringStudio() {
     const url = new URL(window.location.href);
     url.searchParams.delete('job');
     window.history.replaceState({}, '', url.toString());
-  }, [reset]);
+  }, [reset, setDebugArtifacts]);
 
   const handleReprocessCandidate = useCallback(async (
     candidateId: string,
@@ -587,7 +596,10 @@ export function MasteringStudio() {
         )}
 
         {(state.status === 'starting_mastering' || state.status === 'mastering_running') && (
-          <ProgressIndicator status="RUNNING" label={progressLabel} />
+          <div className="space-y-6">
+            <ProgressIndicator status="RUNNING" label={progressLabel} />
+            <DebugArtifactsPanel artifacts={state.debugArtifacts} />
+          </div>
         )}
 
         {state.status === 'previews_ready' && (
@@ -666,6 +678,8 @@ export function MasteringStudio() {
                 )}
               </div>
             )}
+
+            <DebugArtifactsPanel artifacts={state.debugArtifacts} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {state.recommendedCandidates
