@@ -82,6 +82,9 @@ export function DebugArtifactsPanel({ artifacts }: DebugArtifactsPanelProps) {
   const [stageWaveform, setStageWaveform] = useState<WaveformJson | null>(null);
   const [originalWaveform, setOriginalWaveform] = useState<WaveformJson | null>(null);
   const selectedStage = stages.find((stage) => stage.key === selectedKey) || stages[0] || null;
+  const isMasteringDebug = artifacts?.kind === 'mastering_stage_feedback';
+  const title = isMasteringDebug ? 'Mastering Debug' : 'Stage Debug';
+  const originalLabel = isMasteringDebug ? 'Original source waveform' : 'Original waveform';
 
   useEffect(() => {
     if (!selectedStage && selectedKey) {
@@ -100,7 +103,8 @@ export function DebugArtifactsPanel({ artifacts }: DebugArtifactsPanelProps) {
       setOriginalWaveform(null);
       if (!selectedStage?.waveform?.storage_url) return;
 
-      const originalUrl = artifacts?.base?.original_vocal_waveform?.storage_url;
+      const originalUrl = artifacts?.base?.original_source_waveform?.storage_url
+        || artifacts?.base?.original_vocal_waveform?.storage_url;
       try {
         const [stageResponse, originalResponse] = await Promise.all([
           fetch(selectedStage.waveform.storage_url),
@@ -134,11 +138,11 @@ export function DebugArtifactsPanel({ artifacts }: DebugArtifactsPanelProps) {
         <div className="flex items-center gap-2">
           <Bug className="w-4 h-4 text-cyan-400" />
           <div>
-            <h3 className="text-sm font-semibold text-white">Vocal Chain Debug</h3>
+            <h3 className="text-sm font-semibold text-white">{title}</h3>
             <p className="text-xs text-neutral-500">Stage mixes and waveform JSON are loaded from public server URLs.</p>
           </div>
         </div>
-        <div className="text-[11px] text-neutral-500 tabular-nums">{stages.length}/7 stages</div>
+        <div className="text-[11px] text-neutral-500 tabular-nums">{stages.length} stages</div>
       </div>
 
       {artifacts.error && (
@@ -197,7 +201,7 @@ export function DebugArtifactsPanel({ artifacts }: DebugArtifactsPanelProps) {
               <div className="space-y-3">
                 <div>
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-[11px] uppercase tracking-wider text-neutral-500">Original vocal waveform</span>
+                    <span className="text-[11px] uppercase tracking-wider text-neutral-500">{originalLabel}</span>
                     <span className="text-[11px] text-neutral-500">{formatDb(originalWaveform?.summary?.rms_db_p75)}</span>
                   </div>
                   <WaveformBars data={originalWaveform} tone="neutral" />

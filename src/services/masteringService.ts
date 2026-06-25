@@ -34,6 +34,8 @@ export async function startMastering(request: MasteringRequest): Promise<{ comma
       user_goal: request.user_goal || '',
       preview_seconds: request.preview_seconds || 75,
       output_filename: request.output_filename || 'FINAL_MASTER.wav',
+      debug_stage_artifacts_enabled: request.debug_stage_artifacts_enabled ?? true,
+      debug_waveform_points: request.debug_waveform_points || 512,
     },
   });
   return response.json();

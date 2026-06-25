@@ -256,6 +256,8 @@ export interface MasteringRequest {
   user_goal?: string;
   preview_seconds?: number;
   output_filename?: string;
+  debug_stage_artifacts_enabled?: boolean;
+  debug_waveform_points?: number;
 }
 
 export interface ReprocessCandidateResponse {
